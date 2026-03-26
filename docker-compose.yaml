@@ -1,0 +1,110 @@
+networks:
+  default:
+    external:
+    #name of the network
+      name: roboshop  
+
+volumes: 
+  mongodb: #docker volume create mongodb
+  redis:
+  mysql:
+  rabbitmq:
+
+services:
+  # docker run -d --name mongodb --network=roboshop mongodb:1.0 the below script will do same 
+  mongodb:
+  #Image name should be same while building image
+    image: mongodb:1.0   #Image name
+    container_name: mongodb  #Container name
+    volumes:
+    - source: mongodb    #volume name 
+      target: /data/db   #monogodb will store the data in /data/db folder
+      type: volume
+
+
+  catalogue:
+    image: catalogue:1.0
+    container_name: catalogue
+    # After the mongodb is create then it creats catalogue
+    depends_on:
+    - mongodb
+
+  web:
+    image: web:1.0
+    container_name: web
+    ports:
+    - "80:80"
+    depends_on:
+    - catalogue
+    - cart
+    - user
+    - shipping
+    - payment
+
+  redis:
+  #As there is nothing changes to do in rabbitmq we are directly downloading it and using.
+    image: redis
+    container_name: redis
+    volumes:
+    - source: redis
+      target: /data
+      type: volume
+
+  user:
+    image: user:1.0
+    container_name: user
+    depends_on:
+    - redis
+    - mongodb
+
+  cart:
+    image: cart:1.0
+    container_name: cart
+    depends_on:
+    - redis
+    - catalogue
+
+  mysql:
+    image: mysql:1.0
+    container_name: mysql
+    volumes:
+    - source: mysql
+      target: /var/lib/mysql
+      type: volume
+
+  shipping:
+    image: shipping:1.0
+    container_name: shipping
+    depends_on:
+    - mysql
+
+  rabbitmq:
+    image: rabbitmq
+    container_name: rabbitmq
+    volumes:
+    - source: rabbitmq
+      target: /var/lib/rabbitmq
+      type: volume
+    environment:
+    - RABBITMQ_DEFAULT_USER=roboshop
+    - RABBITMQ_DEFAULT_PASS=roboshop123
+
+  payment:
+    container_name: payment
+    image: payment:1.0
+    depends_on:
+    - rabbitmq
+    - user
+    - cart
+
+
+## Command to install docker compose 
+## curl -L https://github.com/docker/compose/releases/download/2.24.5/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+## chmod +x /usr/local/bin/docker-compose
+## docker compose
+
+
+## Docker Compose commands:
+
+## docker compose up -d 
+## docker compose down 
